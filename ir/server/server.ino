@@ -43,8 +43,8 @@
 #include <IRsend.h>
 #include <WiFiClient.h>
 
-const char* kSsid = "William Home";
-const char* kPassword = "guineapig";
+const char* kSsid = "";
+const char* kPassword = "";
 MDNSResponder mdns;
 
 #if defined(ESP8266)

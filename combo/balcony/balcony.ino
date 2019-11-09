@@ -34,7 +34,7 @@ void setup() {
 
   dht.setup(DHTPIN, DHTesp::AM2302);
 
-  wifiMulti.addAP("William Home", "guineapig");
+  wifiMulti.addAP("", "");
 
   Serial.println("Connecting ...");
   int i = 0;
