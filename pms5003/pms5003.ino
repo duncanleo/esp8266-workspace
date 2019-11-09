@@ -26,7 +26,7 @@ void setup() {
   pms.write(Pmsx003::cmdModePassive);
   pms.write(Pmsx003::cmdSleep);
 
-  wifiMulti.addAP("William Home", "guineapig");
+  wifiMulti.addAP("", "");
 
   Serial.println("Connecting ...");
   int i = 0;
