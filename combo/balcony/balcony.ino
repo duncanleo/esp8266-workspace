@@ -3,7 +3,6 @@
 #include <SoftwareSerial.h>
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
-#include <ESP8266WiFiMulti.h> 
 #include <ESP8266mDNS.h>
 #include <ESP8266WebServer.h>
 #include <WiFiUdp.h>
@@ -15,7 +14,6 @@ Pmsx003 pms(4, 5);
 
 DHTesp dht;
 
-ESP8266WiFiMulti wifiMulti;
 ESP8266WebServer server(80);
 
 void handleWake();
@@ -36,11 +34,11 @@ void setup() {
 
   dht.setup(DHTPIN, DHTesp::AM2302);
 
-  wifiMulti.addAP("", "");
+  WiFi.begin("", "");
 
   Serial.println("Connecting ...");
   int i = 0;
-  while (wifiMulti.run() != WL_CONNECTED) {
+  while (WiFi.status() != WL_CONNECTED) {
     delay(250);
     Serial.print('.');
   }
