@@ -201,7 +201,7 @@ void handleHTU() {
   float h = htu.readHumidity();
 
   char sbuf[150];
-  sprintf(sbuf, "{\"status\": true, \"data\": \"temp_c\": %f, \"humidity\": %f}}", t, h);
+  sprintf(sbuf, "{\"status\": true, \"data\": { \"temp_c\": %f, \"humidity\": %f}}", t, h);
   server.send(200, "application/json", sbuf);
 }
 
