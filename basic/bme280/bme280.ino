@@ -1,15 +1,10 @@
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
-#include <Adafruit_BMP280.h>
+#include <Adafruit_BME280.h>
 
 #define SEALEVELPRESSURE_HPA (1013.25)
 
-#define BMP_SCK 13
-#define BMP_MISO 12
-#define BMP_MOSI 11 
-#define BMP_CS 10
-
-Adafruit_BMP280 bme;
+Adafruit_BME280 bme;
 
 void printValues() {
   Serial.print("Temperature = ");
@@ -30,8 +25,8 @@ void printValues() {
   Serial.println(" m");
   
 
-//  Serial.print("Humidity = ");
-//  Serial.print(bme.readHumidity());
+  Serial.print("Humidity = ");
+  Serial.print(bme.readHumidity());
   Serial.println(" %");
 
   Serial.println();
@@ -45,7 +40,7 @@ void setup() {
 
   while (!Serial) {}
 
-  bool status = bme.begin();
+  bool status = bme.begin(0x76);
   if (!status) {
     Serial.println("Could not find a valid BME280 sensor, check wiring!");
     while (1);
