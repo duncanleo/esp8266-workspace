@@ -1,73 +1,137 @@
-/*
- * IRremoteESP8266: IRServer - demonstrates sending IR codes controlled from a webserver
- * Version 0.3 May, 2019
- * Version 0.2 June, 2017
- * Copyright 2015 Mark Szabo
- * Copyright 2019 David Conran
- *
- * An IR LED circuit *MUST* be connected to the ESP on a pin
- * as specified by kIrLed below.
- *
- * TL;DR: The IR LED needs to be driven by a transistor for a good result.
- *
- * Suggested circuit:
- *     https://github.com/crankyoldgit/IRremoteESP8266/wiki#ir-sending
- *
- * Common mistakes & tips:
- *   * Don't just connect the IR LED directly to the pin, it won't
- *     have enough current to drive the IR LED effectively.
- *   * Make sure you have the IR LED polarity correct.
- *     See: https://learn.sparkfun.com/tutorials/polarity/diode-and-led-polarity
- *   * Typical digital camera/phones can be used to see if the IR LED is flashed.
- *     Replace the IR LED with a normal LED if you don't have a digital camera
- *     when debugging.
- *   * Avoid using the following pins unless you really know what you are doing:
- *     * Pin 0/D3: Can interfere with the boot/program mode & support circuits.
- *     * Pin 1/TX/TXD0: Any serial transmissions from the ESP8266 will interfere.
- *     * Pin 3/RX/RXD0: Any serial transmissions to the ESP8266 will interfere.
- *   * ESP-01 modules are tricky. We suggest you use a module with more GPIOs
- *     for your first time. e.g. ESP-12 etc.
- */
 #include <Arduino.h>
-#if defined(ESP8266)
+
 #include <ESP8266WiFi.h>
-#include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
-#endif  // ESP8266
-#if defined(ESP32)
-#include <WiFi.h>
-#include <WebServer.h>
-#include <ESPmDNS.h>
-#endif  // ESP32
+
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
 #include <WiFiClient.h>
 #include <WiFiUdp.h>
 #include <Adafruit_HTU21DF.h>
-
 #include <ArduinoOTA.h>
+#include <MQTT.h>
 
-const char* kSsid = "";
-const char* kPassword = "";
-MDNSResponder mdns;
-
-Adafruit_HTU21DF htu;
-
-#if defined(ESP8266)
-ESP8266WebServer server(80);
-#undef HOSTNAME
-#define HOSTNAME "esp8266"
-#endif  // ESP8266
-#if defined(ESP32)
-WebServer server(80);
-#undef HOSTNAME
-#define HOSTNAME "esp32"
-#endif  // ESP32
+#define HOSTNAME "esp-corner"
 
 const uint16_t kIrLed = 14;  // ESP GPIO pin to use. Recommended: 4 (D2).
 
+const char* kSsid = "";
+const char* kPassword = "";
+
+WiFiClient espClient;
+MQTTClient mqttClient(2048);
+
+Adafruit_HTU21DF htu;
+
 IRsend irsend(kIrLed);  // Set the GPIO to be used to sending the message.
 
+unsigned long prevMillis = 0;
+
+void setup(void) {
+  htu.begin();
+  irsend.begin();
+
+  Serial.begin(115200);
+  WiFi.begin(kSsid, kPassword);
+  WiFi.hostname(HOSTNAME);
+  Serial.println("");
+
+  ArduinoOTA.setHostname(HOSTNAME);
+
+  // Wait for connection
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.print("Connected to ");
+  Serial.println(kSsid);
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP().toString());
+
+  mqttClient.begin("192.168.1.10", espClient);
+  mqttClient.onMessage(callback);
+  mqttConnect();
+
+  ArduinoOTA.onStart([]() {
+    String type;
+    if (ArduinoOTA.getCommand() == U_FLASH) {
+      type = "sketch";
+    } else { // U_SPIFFS
+      type = "filesystem";
+    }
+
+    // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+    Serial.println("Start updating " + type);
+  });
+  ArduinoOTA.onEnd([]() {
+    Serial.println("\nEnd");
+  });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR) {
+      Serial.println("Auth Failed");
+    } else if (error == OTA_BEGIN_ERROR) {
+      Serial.println("Begin Failed");
+    } else if (error == OTA_CONNECT_ERROR) {
+      Serial.println("Connect Failed");
+    } else if (error == OTA_RECEIVE_ERROR) {
+      Serial.println("Receive Failed");
+    } else if (error == OTA_END_ERROR) {
+      Serial.println("End Failed");
+    }
+  });
+  ArduinoOTA.begin();
+
+  Serial.println("HTTP server started");
+}
+
+void mqttConnect() {
+  Serial.println("Connecting to MQTT...");
+  while (!mqttClient.connect(HOSTNAME)) {
+    Serial.print(".");
+    delay(1000);
+  }
+  mqttClient.subscribe("corner/ir");
+}
+
+void loop(void) {
+  if (WiFi.status() != WL_CONNECTED) return;
+  mqttClient.loop();
+  delay(10);
+  ArduinoOTA.handle();
+
+  if (!mqttClient.connected()) {
+    mqttConnect();
+  }
+
+  unsigned long currentMillis = millis();
+  if (currentMillis - prevMillis >= 2000) {
+    prevMillis = currentMillis;
+
+    // ESP Status
+    char espStatus[150];
+    sprintf(espStatus, "{\"uptime\": %d, \"rssi\": %d}", millis(), WiFi.RSSI());
+
+    mqttClient.publish("corner/status", espStatus);
+
+    // HTU21D
+    float t = htu.readTemperature();
+    float h = htu.readHumidity();
+  
+    char htu[150];
+    sprintf(htu, "{\"temp_c\": %f, \"humidity\": %f}", t, h);
+
+    mqttClient.publish("corner/htu21d", htu);
+  }
+}
+
+void callback(String &topic, String &payload) {
+  parseStringAndSendRaw(&irsend, payload);
+}
 
 // Count how many values are in the String.
 // Args:
@@ -152,135 +216,3 @@ bool parseStringAndSendRaw(IRsend *irsend, const String str) {
   return false;  // We probably didn't.
 }
 #endif  // SEND_RAW
-
-void handleRoot() {
-  server.send(200, "text/html",
-              "<html>" \
-                "<head><title>" HOSTNAME " Demo</title></head>" \
-                "<body>" \
-                  "<h1>Hello from " HOSTNAME ", you can send NEC encoded IR" \
-                      "signals from here!</h1>" \
-                  "<p><a href=\"ir?code=16769055\">Send 0xFFE01F</a></p>" \
-                  "<p><a href=\"ir?code=16429347\">Send 0xFAB123</a></p>" \
-                  "<p><a href=\"ir?code=16771222\">Send 0xFFE896</a></p>" \
-                "</body>" \
-              "</html>");
-}
-
-void handleIr() {
-  for (uint8_t i = 0; i < server.args(); i++) {
-    if (server.argName(i) == "code") {
-      parseStringAndSendRaw(&irsend, server.arg(i).c_str());
-    }
-      //uint16_t code = strtoul(server.arg(i).c_str(), NULL, 10);
-#if SEND_NEC
-      //irsend.sendRaw(&code, sizeof code, 32);
-      
-#endif  // SEND_NEC
-    //}
-  }
-  handleRoot();
-}
-
-void handleNotFound() {
-  String message = "File Not Found\n\n";
-  message += "URI: ";
-  message += server.uri();
-  message += "\nMethod: ";
-  message += (server.method() == HTTP_GET)?"GET":"POST";
-  message += "\nArguments: ";
-  message += server.args();
-  message += "\n";
-  for (uint8_t i = 0; i < server.args(); i++)
-    message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
-  server.send(404, "text/plain", message);
-}
-
-void handleHTU() {
-  float t = htu.readTemperature();
-  float h = htu.readHumidity();
-
-  char sbuf[150];
-  sprintf(sbuf, "{\"status\": true, \"data\": { \"temp_c\": %f, \"humidity\": %f}}", t, h);
-  server.send(200, "application/json", sbuf);
-}
-
-void setup(void) {
-  htu.begin();
-  irsend.begin();
-
-  Serial.begin(115200);
-  WiFi.begin(kSsid, kPassword);
-  Serial.println("");
-
-  // Wait for connection
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("");
-  Serial.print("Connected to ");
-  Serial.println(kSsid);
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP().toString());
-
-//#if defined(ESP8266)
-//  if (mdns.begin(HOSTNAME, WiFi.localIP())) {
-//#else  // ESP8266
-//  if (mdns.begin(HOSTNAME)) {
-//#endif  // ESP8266
-//    Serial.println("MDNS responder started");
-//  }
-
-  server.on("/", handleRoot);
-  server.on("/ir", handleIr);
-  server.on("/htu", handleHTU);
-
-  server.on("/inline", [](){
-    server.send(200, "text/plain", "this works as well");
-  });
-
-  server.onNotFound(handleNotFound);
-
-  ArduinoOTA.onStart([]() {
-    String type;
-    if (ArduinoOTA.getCommand() == U_FLASH) {
-      type = "sketch";
-    } else { // U_SPIFFS
-      type = "filesystem";
-    }
-
-    // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-    Serial.println("Start updating " + type);
-  });
-  ArduinoOTA.onEnd([]() {
-    Serial.println("\nEnd");
-  });
-  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-  });
-  ArduinoOTA.onError([](ota_error_t error) {
-    Serial.printf("Error[%u]: ", error);
-    if (error == OTA_AUTH_ERROR) {
-      Serial.println("Auth Failed");
-    } else if (error == OTA_BEGIN_ERROR) {
-      Serial.println("Begin Failed");
-    } else if (error == OTA_CONNECT_ERROR) {
-      Serial.println("Connect Failed");
-    } else if (error == OTA_RECEIVE_ERROR) {
-      Serial.println("Receive Failed");
-    } else if (error == OTA_END_ERROR) {
-      Serial.println("End Failed");
-    }
-  });
-  ArduinoOTA.begin();
-
-  server.begin();
-  Serial.println("HTTP server started");
-}
-
-void loop(void) {
-  if (WiFi.status() != WL_CONNECTED) return;
-  ArduinoOTA.handle();
-  server.handleClient();
-}
