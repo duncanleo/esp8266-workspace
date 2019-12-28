@@ -19,7 +19,7 @@ const char* kSsid = "";
 const char* kPassword = "";
 
 WiFiClient espClient;
-MQTTClient mqttClient(2048);
+MQTTClient mqttClient(3096);
 
 Adafruit_HTU21DF htu;
 
