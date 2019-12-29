@@ -4,14 +4,26 @@
 #include <Adafruit_BME280.h>
 #include <ArduinoOTA.h>
 #include <MQTT.h>
+#include "PMS.h"
+#include <SoftwareSerial.h>
 
 #define SEALEVELPRESSURE_HPA (1013.25)
 #define HOSTNAME "esp-corner-end"
+
+#define PMS_READ_STABLE_DELAY 30000
+#define PMS_UPDATE_INTERVAL 120000
+
+#define PIN_RX  D5
+#define PIN_TX  D6
 
 Adafruit_BME280 bme;
 
 WiFiClient wifiClient;
 MQTTClient mqttClient;
+
+SoftwareSerial pmsSerial(PIN_RX, PIN_TX);
+PMS pms(pmsSerial);
+PMS::DATA data;
 
 int rainPin = A0;
 int thresholdValue = 500;
@@ -21,7 +33,7 @@ const char* kPassword = "";
 
 void setup() {
   Serial.begin(115200);
-  
+
   // setup Rain sensor
   pinMode(rainPin, INPUT);
 
@@ -32,12 +44,16 @@ void setup() {
     while (1);
   }
 
+  // Setup PMS5003
+  pmsSerial.begin(9600);
+  pms.passiveMode();
+
   WiFi.mode(WIFI_STA);
   WiFi.begin(kSsid, kPassword);
   WiFi.hostname(HOSTNAME);
 
   Serial.print("Connecting to WiFi..");
-  
+
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
@@ -98,6 +114,8 @@ void mqttConnect() {
 }
 
 unsigned long prevMillis = 0;
+unsigned long prevMillisPMS = 0;
+bool isPMSAwake = true;
 bool isWet = false;
 
 void loop() {
@@ -141,5 +159,32 @@ void loop() {
     char bmeData[150];
     sprintf(bmeData, "{\"temp_c\": %f, \"pressure\": %f, \"altitude\": %f, \"humidity\": %f }", bme.readTemperature(), bme.readPressure() / 100.0F, bme.readAltitude(SEALEVELPRESSURE_HPA), bme.readHumidity());
     mqttClient.publish("corner-end/bme280", bmeData);
+  }
+
+  if (
+    prevMillisPMS == 0 ||
+    (!isPMSAwake && currentMillis - prevMillisPMS >= PMS_UPDATE_INTERVAL) ||
+    (isPMSAwake && (currentMillis - prevMillisPMS >= PMS_READ_STABLE_DELAY))
+  ) {
+    prevMillisPMS = currentMillis;
+    if (!isPMSAwake) {
+      pms.wakeUp();
+      isPMSAwake = true;
+      Serial.println("PMS5003: Waking up");
+    } else {
+      Serial.println("PMS5003: Read data");
+      pms.requestRead();
+
+      if (pms.readUntil(data, 2000)) {
+        char pmsData [150];
+        sprintf(pmsData, "{\"pm1\": %d, \"pm2.5\": %d, \"pm10\": %d}", data.PM_AE_UG_1_0, data.PM_AE_UG_2_5, data.PM_AE_UG_10_0);
+        mqttClient.publish("corner-end/pms5003", pmsData);
+        Serial.println(pmsData);
+      }
+
+      pms.sleep();
+      isPMSAwake = false;
+      Serial.println("PMS5003: Sleep");
+    }
   }
 }
