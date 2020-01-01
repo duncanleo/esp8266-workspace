@@ -130,6 +130,7 @@ void loop(void) {
 }
 
 void callback(String &topic, String &payload) {
+  delay(500);
   parseStringAndSendRaw(&irsend, payload);
 }
 
