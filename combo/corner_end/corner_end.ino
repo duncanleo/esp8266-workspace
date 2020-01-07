@@ -133,13 +133,11 @@ void loop() {
   unsigned long currentMillis = millis();
   bool wet = sensorValue < thresholdValue;
 
-  if (wet != isWet || prevMillis == 0) {
+  if (currentMillis - prevMillis >= 2000) {
     char wetData[150];
     sprintf(wetData, "{\"wet\": %s }", wet ? "true" : "false");
     mqttClient.publish("corner-end/rain", wetData);
-  }
-
-  if (currentMillis - prevMillis >= 2000) {
+    
     prevMillis = currentMillis;
     Serial.print(sensorValue);
     Serial.print(" isWet=");
