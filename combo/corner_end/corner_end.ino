@@ -144,6 +144,9 @@ void loop() {
     Serial.print(sensorValue);
     Serial.print(" isWet=");
     Serial.print(wet);
+    char rainSensorData[150];
+    sprintf(rainSensorData, "{\"value\": %d }", sensorValue);
+    mqttClient.publish("corner-end/rain/sensorValue", rainSensorData);
     isWet = wet;
 
     // ESP Status
