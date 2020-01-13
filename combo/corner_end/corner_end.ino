@@ -26,7 +26,7 @@ PMS pms(pmsSerial);
 PMS::DATA data;
 
 int rainPin = A0;
-int thresholdValue = 400;
+int thresholdValue = 320;
 
 const char* kSsid = "";
 const char* kPassword = "";
