@@ -41,7 +41,6 @@ void setup() {
   bool status = bme.begin(0x76);
   if (!status) {
     Serial.println("Could not find a valid BME280 sensor, check wiring!");
-    while (1);
   }
 
   // Setup PMS5003
