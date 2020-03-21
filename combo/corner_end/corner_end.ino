@@ -19,7 +19,7 @@
 Adafruit_BME280 bme;
 
 WiFiClient wifiClient;
-MQTTClient mqttClient;
+MQTTClient mqttClient(1024);
 
 SoftwareSerial pmsSerial(PIN_RX, PIN_TX);
 PMS pms(pmsSerial);
@@ -65,6 +65,11 @@ void setup() {
 
   mqttClient.begin("192.168.1.10", wifiClient);
   mqttConnect();
+
+  // HA discovery
+  mqttClient.publish("homeassistant/sensor/corner_end_temp/config", "{\"device_class\": \"temperature\",\"name\": \"Corner End Temperature\", \"unique_id\": \"corner_end_temp\", \"state_topic\": \"corner-end/bme280\", \"unit_of_measurement\": \"°C\", \"value_template\": \"{{ value_json.temp_c }}\"}", true, 0);
+  mqttClient.publish("homeassistant/sensor/corner_end_humidity/config", "{\"device_class\": \"humidity\",\"name\": \"Corner End Humidity\", \"unique_id\": \"corner_end_humidity\", \"state_topic\": \"corner-end/bme280\", \"unit_of_measurement\": \"°C\", \"value_template\": \"{{ value_json.humidity }}\"}", true, 0);
+  mqttClient.publish("homeassistant/sensor/corner_end_pressure/config", "{\"device_class\": \"pressure\",\"name\": \"Corner End Pressure\", \"unique_id\": \"corner_end_pressure\", \"state_topic\": \"corner-end/bme280\", \"unit_of_measurement\": \"°C\", \"value_template\": \"{{ value_json.pressure }}\"}", true, 0);
 
   ArduinoOTA.setHostname(HOSTNAME);
 
