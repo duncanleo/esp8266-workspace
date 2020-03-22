@@ -54,7 +54,7 @@ void setup(void) {
   mqttConnect();
 
   // HA discovery
-  mqttClient.publish("homeassistant/sensor/corner_humidity/config", "{\"device_class\": \"humidity\",\"name\": \"Corner Humidity\", \"unique_id\": \"corner_humidity\", \"state_topic\": \"corner/htu21d\", \"unit_of_measurement\": \"°C\", \"value_template\": \"{{ value_json.humidity }}\"}", true, 0);
+  mqttClient.publish("homeassistant/sensor/corner_humidity/config", "{\"device_class\": \"humidity\",\"name\": \"Corner Humidity\", \"unique_id\": \"corner_humidity\", \"state_topic\": \"corner/htu21d\", \"unit_of_measurement\": \"%\", \"value_template\": \"{{ value_json.humidity }}\"}", true, 0);
   mqttClient.publish("homeassistant/sensor/corner_temp/config", "{\"device_class\": \"temperature\",\"name\": \"Corner Temperature\", \"unique_id\": \"corner_temp\", \"state_topic\": \"corner/htu21d\", \"unit_of_measurement\": \"°C\", \"value_template\": \"{{ value_json.temp_c }}\"}", true, 0);
 
   ArduinoOTA.onStart([]() {
