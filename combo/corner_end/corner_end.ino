@@ -67,9 +67,9 @@ void setup() {
   mqttConnect();
 
   // HA discovery
-  mqttClient.publish("homeassistant/sensor/corner_end_humidity/config", "{\"device_class\": \"humidity\",\"name\": \"Corner End Humidity\", \"unique_id\": \"corner_end_humidity\", \"state_topic\": \"corner-end/bme280\", \"unit_of_measurement\": \"°C\", \"value_template\": \"{{ value_json.humidity }}\"}", true, 0);
+  mqttClient.publish("homeassistant/sensor/corner_end_humidity/config", "{\"device_class\": \"humidity\",\"name\": \"Corner End Humidity\", \"unique_id\": \"corner_end_humidity\", \"state_topic\": \"corner-end/bme280\", \"unit_of_measurement\": \"%\", \"value_template\": \"{{ value_json.humidity }}\"}", true, 0);
   mqttClient.publish("homeassistant/sensor/corner_end_temp/config", "{\"device_class\": \"temperature\",\"name\": \"Corner End Temperature\", \"unique_id\": \"corner_end_temp\", \"state_topic\": \"corner-end/bme280\", \"unit_of_measurement\": \"°C\", \"value_template\": \"{{ value_json.temp_c }}\"}", true, 0);
-  mqttClient.publish("homeassistant/sensor/corner_end_pressure/config", "{\"device_class\": \"pressure\",\"name\": \"Corner End Pressure\", \"unique_id\": \"corner_end_pressure\", \"state_topic\": \"corner-end/bme280\", \"unit_of_measurement\": \"°C\", \"value_template\": \"{{ value_json.pressure }}\"}", true, 0);
+  mqttClient.publish("homeassistant/sensor/corner_end_pressure/config", "{\"device_class\": \"pressure\",\"name\": \"Corner End Pressure\", \"unique_id\": \"corner_end_pressure\", \"state_topic\": \"corner-end/bme280\", \"unit_of_measurement\": \"Pa\", \"value_template\": \"{{ value_json.pressure }}\"}", true, 0);
   mqttClient.publish("homeassistant/sensor/corner_end_pm1/config", "{\"name\": \"Corner End PM1\", \"unique_id\": \"corner_end_pm1\", \"state_topic\": \"corner-end/pms5003\", \"unit_of_measurement\": \"μg/m³\", \"value_template\": \"{{ value_json.pm1 }}\"}", true, 0);
   mqttClient.publish("homeassistant/sensor/corner_end_pm10/config", "{\"name\": \"Corner End PM10\", \"unique_id\": \"corner_end_pm10\", \"state_topic\": \"corner-end/pms5003\", \"unit_of_measurement\": \"μg/m³\", \"value_template\": \"{{ value_json.pm10 }}\"}", true, 0);
   mqttClient.publish("homeassistant/sensor/corner_end_pm25/config", "{\"name\": \"Corner End PM2.5\", \"unique_id\": \"corner_end_pm25\", \"state_topic\": \"corner-end/pms5003\", \"unit_of_measurement\": \"μg/m³\", \"value_template\": \"{{ value_json.pm25 }}\"}", true, 0);
@@ -185,7 +185,7 @@ void loop() {
 
       if (pms.readUntil(data, 2000)) {
         char pmsData [150];
-        sprintf(pmsData, "{\"pm1\": %d, \"pm2.5\": %d, \"pm10\": %d}", data.PM_AE_UG_1_0, data.PM_AE_UG_2_5, data.PM_AE_UG_10_0);
+        sprintf(pmsData, "{\"pm1\": %d, \"pm25\": %d, \"pm2.5\": %d, \"pm10\": %d}", data.PM_AE_UG_1_0, data.PM_AE_UG_2_5, data.PM_AE_UG_2_5, data.PM_AE_UG_10_0);
         mqttClient.publish("corner-end/pms5003", pmsData);
         Serial.println(pmsData);
       }
