@@ -67,9 +67,12 @@ void setup() {
   mqttConnect();
 
   // HA discovery
-  mqttClient.publish("homeassistant/sensor/corner_end_temp/config", "{\"device_class\": \"temperature\",\"name\": \"Corner End Temperature\", \"unique_id\": \"corner_end_temp\", \"state_topic\": \"corner-end/bme280\", \"unit_of_measurement\": \"°C\", \"value_template\": \"{{ value_json.temp_c }}\"}", true, 0);
   mqttClient.publish("homeassistant/sensor/corner_end_humidity/config", "{\"device_class\": \"humidity\",\"name\": \"Corner End Humidity\", \"unique_id\": \"corner_end_humidity\", \"state_topic\": \"corner-end/bme280\", \"unit_of_measurement\": \"°C\", \"value_template\": \"{{ value_json.humidity }}\"}", true, 0);
+  mqttClient.publish("homeassistant/sensor/corner_end_temp/config", "{\"device_class\": \"temperature\",\"name\": \"Corner End Temperature\", \"unique_id\": \"corner_end_temp\", \"state_topic\": \"corner-end/bme280\", \"unit_of_measurement\": \"°C\", \"value_template\": \"{{ value_json.temp_c }}\"}", true, 0);
   mqttClient.publish("homeassistant/sensor/corner_end_pressure/config", "{\"device_class\": \"pressure\",\"name\": \"Corner End Pressure\", \"unique_id\": \"corner_end_pressure\", \"state_topic\": \"corner-end/bme280\", \"unit_of_measurement\": \"°C\", \"value_template\": \"{{ value_json.pressure }}\"}", true, 0);
+  mqttClient.publish("homeassistant/sensor/corner_end_pm1/config", "{\"name\": \"Corner End PM1\", \"unique_id\": \"corner_end_pm1\", \"state_topic\": \"corner-end/pms5003\", \"unit_of_measurement\": \"μg/m³\", \"value_template\": \"{{ value_json.pm1 }}\"}", true, 0);
+  mqttClient.publish("homeassistant/sensor/corner_end_pm10/config", "{\"name\": \"Corner End PM10\", \"unique_id\": \"corner_end_pm10\", \"state_topic\": \"corner-end/pms5003\", \"unit_of_measurement\": \"μg/m³\", \"value_template\": \"{{ value_json.pm10 }}\"}", true, 0);
+  mqttClient.publish("homeassistant/sensor/corner_end_pm25/config", "{\"name\": \"Corner End PM2.5\", \"unique_id\": \"corner_end_pm25\", \"state_topic\": \"corner-end/pms5003\", \"unit_of_measurement\": \"μg/m³\", \"value_template\": \"{{ value_json.pm25 }}\"}", true, 0);
 
   ArduinoOTA.setHostname(HOSTNAME);
 
