@@ -25,8 +25,6 @@ SoftwareSerial pmsSerial(PIN_RX, PIN_TX);
 PMS pms(pmsSerial);
 PMS::DATA data;
 
-int rainPin = A0;
-int thresholdValue = 400;
 
 const char* kSsid = "";
 const char* kPassword = "";
@@ -34,8 +32,6 @@ const char* kPassword = "";
 void setup() {
   Serial.begin(115200);
 
-  // setup Rain sensor
-  pinMode(rainPin, INPUT);
 
   // Setup BME280
   bool status = bme.begin(0x76);
@@ -123,7 +119,6 @@ void mqttConnect() {
 unsigned long prevMillis = 0;
 unsigned long prevMillisPMS = 0;
 bool isPMSAwake = true;
-bool isWet = false;
 
 void loop() {
   if (WiFi.status() != WL_CONNECTED) return;
@@ -135,24 +130,10 @@ void loop() {
     mqttConnect();
   }
 
-  int sensorValue = analogRead(rainPin);
-
   unsigned long currentMillis = millis();
-  bool wet = sensorValue < thresholdValue;
 
   if (currentMillis - prevMillis >= 2000) {
-    char wetData[150];
-    sprintf(wetData, "{\"wet\": %s }", wet ? "true" : "false");
-    mqttClient.publish("corner-end/rain", wetData);
-    
     prevMillis = currentMillis;
-    Serial.print(sensorValue);
-    Serial.print(" isWet=");
-    Serial.print(wet);
-    char rainSensorData[150];
-    sprintf(rainSensorData, "{\"value\": %d }", sensorValue);
-    mqttClient.publish("corner-end/rain/sensorValue", rainSensorData);
-    isWet = wet;
 
     // ESP Status
     char espStatus[150];
