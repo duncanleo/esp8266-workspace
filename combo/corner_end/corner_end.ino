@@ -32,7 +32,6 @@ const char* kPassword = "";
 void setup() {
   Serial.begin(115200);
 
-
   // Setup BME280
   bool status = bme.begin(0x76);
   if (!status) {
