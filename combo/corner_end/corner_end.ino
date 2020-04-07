@@ -13,6 +13,10 @@
 #define PMS_READ_STABLE_DELAY 30000
 #define PMS_UPDATE_INTERVAL 120000
 
+#define BME_READ_INTERVAL 60000
+
+#define STATUS_INTERVAL 2000
+
 #define PIN_RX  D5
 #define PIN_TX  D6
 
@@ -115,7 +119,8 @@ void mqttConnect() {
   }
 }
 
-unsigned long prevMillis = 0;
+unsigned long prevMillisStatus = 0;
+unsigned long prevMillisBME = 0;
 unsigned long prevMillisPMS = 0;
 bool isPMSAwake = true;
 
@@ -131,14 +136,18 @@ void loop() {
 
   unsigned long currentMillis = millis();
 
-  if (currentMillis - prevMillis >= 2000) {
-    prevMillis = currentMillis;
+  if (currentMillis - prevMillisStatus >= STATUS_INTERVAL) {
+    prevMillisStatus = currentMillis;
 
     // ESP Status
     char espStatus[150];
     sprintf(espStatus, "{\"uptime\": %d, \"rssi\": %d}", millis(), WiFi.RSSI());
 
     mqttClient.publish("corner-end/status", espStatus);
+  }
+
+  if (currentMillis - prevMillisBME >= BME_READ_INTERVAL) {
+    prevMillisBME = currentMillis;    
 
     Serial.print(" Temperature = ");
     Serial.print(bme.readTemperature());
