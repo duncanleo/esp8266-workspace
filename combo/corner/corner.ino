@@ -13,6 +13,9 @@
 
 #define HOSTNAME "esp-corner"
 
+#define STATUS_INTERVAL 2000
+#define HTU_READ_INTERVAL 60000
+
 const uint16_t kIrLed = 14;  // ESP GPIO pin to use. Recommended: 4 (D2).
 
 const char* kSsid = "";
@@ -24,8 +27,6 @@ MQTTClient mqttClient(3096);
 Adafruit_HTU21DF htu;
 
 IRsend irsend(kIrLed);  // Set the GPIO to be used to sending the message.
-
-unsigned long prevMillis = 0;
 
 void setup(void) {
   htu.begin();
@@ -102,6 +103,9 @@ void mqttConnect() {
   mqttClient.subscribe("corner/ir");
 }
 
+unsigned long prevMillisStatus = 0;
+unsigned long prevMillisHTU = 0;
+
 void loop(void) {
   if (WiFi.status() != WL_CONNECTED) return;
   mqttClient.loop();
@@ -113,15 +117,19 @@ void loop(void) {
   }
 
   unsigned long currentMillis = millis();
-  if (currentMillis - prevMillis >= 2000) {
-    prevMillis = currentMillis;
+  if (currentMillis - prevMillisStatus >= STATUS_INTERVAL) {
+    prevMillisStatus = currentMillis;
 
     // ESP Status
     char espStatus[150];
     sprintf(espStatus, "{\"uptime\": %d, \"rssi\": %d}", millis(), WiFi.RSSI());
 
-    mqttClient.publish("corner/status", espStatus);
+    mqttClient.publish("corner/status", espStatus); 
+  }
 
+  if (currentMillis - prevMillisHTU >= HTU_READ_INTERVAL) {
+    prevMillisHTU = currentMillis;
+    
     // HTU21D
     float t = htu.readTemperature();
     float h = htu.readHumidity();
